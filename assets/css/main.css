@@ -126,11 +126,11 @@ img {
 	margin: 0 auto;
 	display: grid;
 	padding: 5rem;
-	grid-template-columns: 1fr 1fr;
+	grid-template-columns: 2fr 2fr;
 	gap: 4rem;
 }
 
-@media only screen and (max-width: 768px) {
+@media only screen and (max-width: 968px) {
 	.container {
 		width: 100%;
 		grid-template-columns: 1fr;
