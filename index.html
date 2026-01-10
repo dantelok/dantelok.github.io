@@ -1,95 +1,195 @@
-<!DOCTYPE HTML>
-<html>
-	<head>
-		<title>Dante Lok Portfolio</title>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-		<link rel="stylesheet" href="assets/css/main.css" />
-		<noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
-	</head>
-	<body class="is-preload">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dante Lok</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="name">Dante Lok</h1>
+            <nav class="nav">
+                <a href="#home" class="nav-link active" data-section="home">Home</a>
+                <a href="#blogs" class="nav-link" data-section="blogs">Blogs</a>
+                <a href="#publications" class="nav-link" data-section="publications">Publications</a>
+                <a href="#projects" class="nav-link" data-section="projects">Projects</a>
+                <a href="#cv" class="nav-link" data-section="cv">CV</a>
+            </nav>
+            <button class="theme-toggle" aria-label="Toggle dark mode">
+                <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="5"/>
+                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                </svg>
+                <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+            </button>
+        </header>
 
-		<!-- Wrapper -->
-			<div id="wrapper" class="fade-in">
+        <!-- Home Section -->
+        <section id="home" class="section active">
+            <div class="about-layout">
+                <div class="about-main">
+                    <div class="profile-row">
+                        <div class="profile-image">
+                            <div class="profile-placeholder">DL</div>
+                        </div>
+                        <div class="profile-intro">
+                            <p>I am an AI engineer and researcher at Votee AI.</p>
+                            <p>I love mathematics and science, I hope AI can help us solve some challenges in these fields.</p>
+                            <p>Currently focused on AI thinking and reasoning, continuous-time generative models (CTGM) for more interpretable and explainable AI systems.</p>
+                            <p class="links-row">
+                                <a href="https://x.com/" target="_blank">Twitter</a> / 
+                                <a href="https://scholar.google.com/" target="_blank">Google Scholar</a> / 
+                                <a href="https://github.com/" target="_blank">GitHub</a> / 
+                                <a href="https://linkedin.com/" target="_blank">LinkedIn</a> / 
+                                <a href="mailto:dante@example.com">Email</a>
+                            </p>
+                        </div>
+                    </div>
 
-				<!-- Intro -->
-					<div id="intro">
-						<h1>Dante Lok Portfolio</h1>
-						<p>AI Engineer and Researcher well-versed in Natural Language Processing, Speech Processing, Computer Visions <br><a href="https://github.com/dantelok">@Dantelok</a></p>
-						<ul class="actions">
-							<li><a href="#header" class="button icon solid solo fa-arrow-down scrolly">Continue</a></li>
-						</ul>
-					</div>
-				<!-- Header -->
-					<header id="header">
-						<a href="index.html" class="logo">Dante Lok</a>
-					</header>
+                    <h2>Research Interests</h2>
+                    <ul class="interests-list">
+                        <li><strong>Deep Learning</strong> — Neural architectures, optimization, and training at scale</li>
+                        <li><strong>Natural Language Processing</strong> — Large language models, reasoning and planning</li>
+                        <li><strong>Computer Vision</strong> — Depth estimation, 3D reconstruction, scene understanding, and generation</li>
+                        <li><strong>Reinforcement Learning</strong> — Planning and agentic behavior</li>
+                        <li><strong>Interpretability</strong> — Explainable AI, model introspection, and consciousness</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
 
-				<!-- Nav -->
-					<nav id="nav">
-						<ul class="links">
-							<li class="active"><a href="index.html">About Me</a></li>
-							<li><a href="project.html">Projects</a></li>
-							<li><a href="publications.html">Publications</a></li>
-							<li><a href="resume.html">Resume</a></li>
-						</ul>
-						<ul class="icons">
-							<li><a href="#" class="icon brands fa-twitter"><span class="label">Twitter</span></a></li>
-							<li><a href="https://www.linkedin.com/in/dante-lok-2a09a5146/" class="icon brands fa-linkedin"><span class="label">Linkedin</span></a></li>
-							<li><a href="https://www.kaggle.com/dantelok" class="icon brands fa-kaggle"><span class="label">Kaggle</span></a></li>
-							<li><a href="https://github.com/dantelok" class="icon brands fa-github"><span class="label">GitHub</span></a></li>
-						</ul>
-					</nav>
+        <!-- Blogs Section -->
+        <section id="blogs" class="section">
+            <h2>Blogs</h2>
+            <p class="section-desc">Thoughts on AI, math, and research.</p>
+            
+            <table class="data-table">
+                <tbody>
+                    <tr>
+                        <td class="date-col">2026 Jan</td>
+                        <td><a href="#">Understanding Attention Mechanisms</a></td>
+                    </tr>
+                    <tr>
+                        <td class="date-col">2025 Dec</td>
+                        <td><a href="#">Scaling ML Training Infrastructure</a></td>
+                    </tr>
+                    <tr>
+                        <td class="date-col">2025 Nov</td>
+                        <td><a href="#">The Future of AI Agents</a></td>
+                    </tr>
+                    <tr>
+                        <td class="date-col">2025 Oct</td>
+                        <td><a href="#">Lessons from Building Production ML Systems</a></td>
+                    </tr>
+                    <tr>
+                        <td class="date-col">2025 Sep</td>
+                        <td><a href="#">On Interpretability and Trust in AI</a></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
 
-				<!-- Main -->
-					<div id="main">
-						<!-- Post -->
-						<section class="post">
-							<header class="major">
-								<h1>About me</h1>
-							</header>
-							<div class="image main"><img src="images/profile.jpg" alt="" /></div>
-							<p>I am an AI Engineer and Researcher at <a href="https://owntheroom.com/own-the-room-by-lifehikes/lifehikes/">LifeHikes</a>. 
-								My main area of interest is Natural Language Processing and Speech Processing, especially in Natural Language Understanding. But I also have some works in Computer Visions.
-							</p>
-							<p>During my undergraduate studies, I took many math and finance related courses at The Hong Kong Polytechnic University since I was in love with math and hoped I can apply them to make a fortune.
-								After graduated, I joined few banks and financial institution as a finance position, but I found that meaningless thinking all about money every day and night.
-								Before starting my Machine Learning research career, I spent some time in Citrix as a Data Analyst, to take new challenges and look for a way to make a bigger impact.
-								Then, I took the machine learning course by Andrew Ng and started applying the knowledge to my work in Citrix. I built the first machine learning project predicting the sales and potential customers in our Hong Kong Marketing team at Citrix.
-								At that time, I found the AI applications is fascinating and I want to be a part of the community. Finally, I landed my first machine learning job.
-								In my first machine learning job as an Analyst Programmer at IconTek, I built the whole testing demo and integrated a trained chatbot into it.
-								Unfortunately, I experienced a layoff during the recession in 2019.
-							</p>
-							<p> In 2020, I joined LifeHikes as their first AI Engineer. 
-							</p>
-						</section>
-					</div>
+        <!-- Publications Section -->
+        <section id="publications" class="section">
+            <h2>Publications</h2>
+            
+            <table class="data-table">
+                <tbody>
+                    <tr>
+                        <td class="date-col">2025</td>
+                        <td>
+                            <a href="https://arxiv.org/abs/2511.20853">MODEST: Multi-Optics Depth-of-Field Stereo Dataset.</a>
+                            <span class="venue">TBD.</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
 
-				<!-- Footer -->
-				<footer id="footer">
-					<section class="split contact">
-						<section>
-							<h3>Email</h3>
-							<p><a href="dantelok93@gmail.com">dantelok93@gmail.com</a></p>
-						</section>
-					</section>
-				</footer>
+        <!-- Projects Section -->
+        <section id="projects" class="section">
+            <h2>Projects</h2>
+            <p class="section-desc">Open source and personal projects.</p>
+            
+            <table class="data-table">
+                <tbody>
+                    <tr>
+                        <td class="project-name"><a href="#">LLM Toolkit</a></td>
+                        <td>A comprehensive library for fine-tuning and deploying large language models efficiently. <span class="tech-stack">Python, PyTorch, CUDA</span></td>
+                    </tr>
+                    <tr>
+                        <td class="project-name"><a href="#">Neural Viz</a></td>
+                        <td>Interactive visualization tool for understanding neural network internals and attention patterns. <span class="tech-stack">TypeScript, D3.js, WebGL</span></td>
+                    </tr>
+                    <tr>
+                        <td class="project-name"><a href="#">Agent Framework</a></td>
+                        <td>A lightweight framework for building and orchestrating autonomous AI agents. <span class="tech-stack">Python, LangChain, FastAPI</span></td>
+                    </tr>
+                    <tr>
+                        <td class="project-name"><a href="#">Model Quantizer</a></td>
+                        <td>Tools for quantizing and optimizing neural networks for edge deployment. <span class="tech-stack">C++, Python, ONNX</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
 
-				<!-- Copyright -->
-					<div id="copyright">
-						<ul><li>&copy; DanteLok</li><li>Design: <a href="https://html5up.net">HTML5 UP</a></li></ul>
-					</div>
+        <!-- CV Section -->
+        <section id="cv" class="section">
+            <h2>CV</h2>
+            <p class="section-desc"><a href="#" class="download-link">Download full CV (PDF)</a></p>
 
-			</div>
+            <h3>Experience</h3>
+            <table class="data-table">
+                <tbody>
+                    <tr>
+                        <td class="date-col">2025–Present</td>
+                        <td><strong>Senior AI Engineer</strong> at Votee AI. Research on advanced AI thinking and reasoning. Build production-ready AI systems for customers.</td>
+                    </tr>
+                    <tr>
+                        <td class="date-col">2024–2025</td>
+                        <td><strong>AI Engineering Lead</strong> at Omnichat. Leading development of large-scale AI systems and infrastructure.</td>
+                    </tr>
+                    <tr>
+                        <td class="date-col">2020–2024</td>
+                        <td><strong>AI Engineer</strong> at LifeHikes. Conducted research in NLP, speech recognition and computer vision. Research collaboration with Hong Kong University of Science and Technology. Deployed production-ready NLP, speech recognition and computer vision models for customers.</td>
+                    </tr>
+                    <tr>
+                        <td class="date-col">2018–2019</td>
+                        <td><strong>ML Engineer</strong> at IconTek Technologies Limited. Research of Natural Intelligence in Natural Language Processing and Speech Recognition. Research collaboration with Carnegie Mellon University. Built production-ready application for customers.</td>
+                    </tr>
+                </tbody>
+            </table>
 
-		<!-- Scripts -->
-			<script src="assets/js/jquery.min.js"></script>
-			<script src="assets/js/jquery.scrollex.min.js"></script>
-			<script src="assets/js/jquery.scrolly.min.js"></script>
-			<script src="assets/js/browser.min.js"></script>
-			<script src="assets/js/breakpoints.min.js"></script>
-			<script src="assets/js/util.js"></script>
-			<script src="assets/js/main.js"></script>
+            <h3>Education</h3>
+            <table class="data-table">
+                <tbody>
+                    <tr>
+                        <td class="date-col">2017</td>
+                        <td><strong>B.S. in Applied Mathematics</strong>, The Hong Kong Polytechnic University. </td>
+                    </tr>
+                </tbody>
+            </table>
 
-	</body>
+            <h3>Skills</h3>
+            <p><strong>Languages:</strong> Python, CUDA, C++, C, Java, Node.js</p>
+            <p><strong>ML/AI:</strong> PyTorch, TensorFlow, JAX, Transformers, LangChain, FastAPI</p>
+            <p><strong>Infrastructure:</strong> Kubernetes, Docker, AWS, GCP, Azure, Jenkins, Linux</p>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>© 2026 Dante Lok</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
 </html>
