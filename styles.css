@@ -61,6 +61,14 @@ a:hover {
     text-decoration: underline;
 }
 
+/* Override link styles for icon links */
+a.social-icon,
+a.social-icon:visited,
+a.social-icon:link {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+}
+
 ul, ol {
     list-style: none;
 }
@@ -228,7 +236,7 @@ ul, ol {
     margin-top: 1rem;
 }
 
-.social-icon {
+.social-icons a.social-icon {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -236,20 +244,38 @@ ul, ol {
     height: 32px;
     color: var(--color-text-secondary);
     transition: color 0.2s ease, transform 0.2s ease;
+    text-decoration: none;
 }
 
-.social-icon:hover {
+.social-icons a.social-icon:hover {
     color: var(--color-link);
     transform: translateY(-2px);
     text-decoration: none;
 }
 
-.social-icon svg {
+.social-icons a.social-icon svg {
     width: 22px;
     height: 22px;
     max-width: 22px;
     max-height: 22px;
     flex-shrink: 0;
+}
+
+.social-icons a.social-icon svg path {
+    fill: #555555;
+    transition: fill 0.2s ease;
+}
+
+.social-icons a.social-icon:hover svg path {
+    fill: var(--color-link);
+}
+
+[data-theme="dark"] .social-icons a.social-icon svg path {
+    fill: #b0b0b0;
+}
+
+[data-theme="dark"] .social-icons a.social-icon:hover svg path {
+    fill: var(--color-link);
 }
 
 .interests-list {
