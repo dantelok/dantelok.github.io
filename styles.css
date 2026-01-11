@@ -219,6 +219,34 @@ ul, ol {
     white-space: nowrap;
 }
 
+/* Social Icons */
+.social-icons {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.social-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    color: var(--color-text-secondary);
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.social-icon:hover {
+    color: var(--color-link);
+    transform: translateY(-2px);
+    text-decoration: none;
+}
+
+.social-icon svg {
+    width: 22px;
+    height: 22px;
+}
+
 .interests-list {
     margin-left: 0;
 }
