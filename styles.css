@@ -131,6 +131,8 @@ ul, ol {
 .theme-toggle svg {
     width: 20px;
     height: 20px;
+    max-width: 20px;
+    max-height: 20px;
 }
 
 .icon-moon {
@@ -245,6 +247,9 @@ ul, ol {
 .social-icon svg {
     width: 22px;
     height: 22px;
+    max-width: 22px;
+    max-height: 22px;
+    flex-shrink: 0;
 }
 
 .interests-list {
