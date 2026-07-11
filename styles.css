@@ -328,9 +328,18 @@ ul, ol {
     padding-right: 1rem;
 }
 
+.authors {
+    display: block;
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    margin-top: 0.15rem;
+}
+
 .venue {
+    display: block;
     color: var(--color-text-secondary);
     font-style: italic;
+    margin-top: 0.15rem;
 }
 
 .tech-stack {
