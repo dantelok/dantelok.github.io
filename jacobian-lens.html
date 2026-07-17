@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How the Jacobian Lens Works — Dante Lok</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Set theme before first paint to avoid a flash -->
+    <script>
+        (function () {
+            var saved = localStorage.getItem('theme');
+            var dark = saved ? saved === 'dark'
+                : window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+        })();
+    </script>
+    <!-- MathJax for equation rendering -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['\\(', '\\)']],
+                displayMath: [['\\[', '\\]']]
+            },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    <!-- Three.js for the interactive tangent-plane figure -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="name">Dante Lok</h1>
+            <nav class="nav">
+                <a href="index.html#home" class="nav-link">Home</a>
+                <a href="index.html#blogs" class="nav-link active">Blogs</a>
+                <a href="index.html#publications" class="nav-link">Publications</a>
+                <a href="index.html#projects" class="nav-link">Projects</a>
+            </nav>
+            <button class="theme-toggle" aria-label="Toggle dark mode">
+                <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="5"/>
+                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                </svg>
+                <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+            </button>
+        </header>
+
+        <!-- Post -->
+        <article class="post section active">
+            <a href="index.html#blogs" class="back-link">← Back to blogs</a>
+
+            <h1 class="post-title">How the Jacobian Lens Works: Reading What a Model Is Poised to Say</h1>
+            <p class="post-meta">17 July 2026 · ~15 min read</p>
+
+            <p class="post-lede">
+                The Jacobian Lens (J-Lens) is a small idea with a big payoff: to read a hidden
+                layer of a language model, don't pretend it already lives in the output vocabulary —
+                <em>transport</em> it there with the derivative of the rest of the network. This post
+                builds the idea from scratch: what a Jacobian is, how the lens uses one, and why the
+                Jacobian is exactly the right object for the job.
+            </p>
+
+            <h2>1. The problem: reading a mind mid-thought</h2>
+            <p>
+                A transformer processes a token through a stack of layers. At each layer the model
+                keeps a running vector — the <strong>residual stream</strong> — that it reads from and
+                writes to. Call the residual stream at layer \(\ell\) and position \(t\) the vector
+                \(h_{\ell,t} \in \mathbb{R}^{d}\), where \(d\) is the model width (<code>d_model</code>).
+            </p>
+            <p>
+                We would love to ask, at any intermediate layer: <em>what is the model currently
+                "thinking" — which words is it leaning toward?</em> The classic tool for this is the
+                <strong>logit lens</strong>. The model turns its <em>final</em> residual vector into a
+                distribution over vocabulary tokens using a normalization step and an unembedding
+                matrix \(W_U\):
+            </p>
+            <div class="math-display">
+                \[
+                \text{output distribution} \;=\; \operatorname{softmax}\!\big(W_U \,\operatorname{norm}(h_{L,t})\big),
+                \]
+            </div>
+            <p>
+                where \(L\) is the last layer. The logit lens simply applies that <em>same</em> readout
+                to an <em>intermediate</em> layer:
+            </p>
+            <div class="math-display">
+                \[
+                \text{logit-lens}(h_{\ell,t}) \;=\; \operatorname{softmax}\!\big(W_U \,\operatorname{norm}(h_{\ell,t})\big).
+                \]
+            </div>
+
+            <p>
+                This works surprisingly well in the <em>late</em> layers and poorly in the early and
+                middle ones, where it mostly returns noise. Why? Because it makes a hidden assumption.
+            </p>
+
+            <div class="callout">
+                <p>
+                    <strong>The hidden assumption of the logit lens.</strong> Applying \(W_U\) directly
+                    to \(h_{\ell,t}\) assumes that layer \(\ell\)'s activations already live in the same
+                    coordinate system as the final layer — that the remaining layers \(\ell{+}1,\dots,L\)
+                    do nothing but carry the vector forward unchanged. In reality those layers actively
+                    <em>rotate, rescale, and rewrite</em> the representation. Early on, the model's
+                    internal "language" hasn't yet been converted into the output basis, so reading it
+                    with the final-layer decoder is like reading French text with an English dictionary.
+                </p>
+            </div>
+
+            <p>
+                The Jacobian Lens fixes exactly this. Instead of assuming the rest of the network is the
+                identity, it <em>measures</em> what the rest of the network does — to first order — and
+                corrects for it. That measurement is a Jacobian. So let's build up what a Jacobian is.
+            </p>
+
+            <h2>2. What is a Jacobian?</h2>
+
+            <h3>2.1 From slope to gradient to matrix</h3>
+            <p>
+                Start with a plain scalar function \(f:\mathbb{R}\to\mathbb{R}\). Its derivative
+                \(f'(x)\) is the <em>local slope</em>: nudge the input by a tiny \(\delta\), and the
+                output changes by about \(f'(x)\,\delta\). This is the first-order Taylor approximation,
+            </p>
+            <div class="math-display">
+                \[
+                f(x+\delta) \approx f(x) + f'(x)\,\delta .
+                \]
+            </div>
+            <p>
+                Now let the input be a vector and the output be a vector too:
+                \(F:\mathbb{R}^{n}\to\mathbb{R}^{m}\), written component-wise as
+                \(F(x) = \big(F_1(x), \dots, F_m(x)\big)\). There is no single "slope" anymore — each of
+                the \(m\) outputs can respond to each of the \(n\) inputs. Collecting all of those
+                responses gives the <strong>Jacobian matrix</strong> \(J \in \mathbb{R}^{m\times n}\):
+            </p>
+            <div class="math-display">
+                \[
+                J \;=\; \frac{\partial F}{\partial x}
+                \;=\;
+                \begin{bmatrix}
+                \dfrac{\partial F_1}{\partial x_1} & \cdots & \dfrac{\partial F_1}{\partial x_n} \\[1.1em]
+                \vdots & \ddots & \vdots \\[0.6em]
+                \dfrac{\partial F_m}{\partial x_1} & \cdots & \dfrac{\partial F_m}{\partial x_n}
+                \end{bmatrix},
+                \qquad
+                J_{ij} = \frac{\partial F_i}{\partial x_j}.
+                \]
+            </div>
+            <p>
+                Read entry \(J_{ij}\) as a sentence: <em>"if I nudge input coordinate \(j\), how much does
+                output coordinate \(i\) move?"</em> The Jacobian is just the whole table of those answers.
+            </p>
+
+            <h3>2.2 The Jacobian is the best linear approximation</h3>
+            <p>
+                The single most important fact for us: the Jacobian is the <strong>best local linear
+                approximation</strong> of a nonlinear map. The vector Taylor expansion reads
+            </p>
+            <div class="math-display">
+                \[
+                F(x+\delta) \;\approx\; F(x) \;+\; J\,\delta .
+                \]
+            </div>
+            <p>
+                Near the point \(x\), the complicated nonlinear function \(F\) behaves like the simple
+                linear function \(\delta \mapsto J\delta\). A whole stack of attention blocks, MLPs, and
+                normalizations — replaced, locally, by a single matrix multiply. That is what makes the
+                Jacobian tractable and interpretable at the same time.
+            </p>
+
+            <figure class="figure">
+                <svg viewBox="0 0 480 300" role="img" aria-label="A curved function with its tangent line at a point, showing the first-order linear approximation.">
+                    <!-- axes -->
+                    <line class="dg-axis" x1="55" y1="255" x2="455" y2="255"/>
+                    <line class="dg-axis" x1="55" y1="255" x2="55" y2="30"/>
+                    <!-- curve f(x) -->
+                    <path class="dg-curve" d="M 70 245 C 160 235, 220 120, 440 55"/>
+                    <!-- tangent line at P (visually tangent near x0) -->
+                    <line class="dg-tangent" x1="120" y1="235" x2="360" y2="95"/>
+                    <!-- point P -->
+                    <circle class="dg-dot" cx="240" cy="165" r="4.5"/>
+                    <!-- delta helper: horizontal run and vertical rise -->
+                    <line class="dg-ghost" x1="240" y1="165" x2="320" y2="165"/>
+                    <line class="dg-ghost" x1="320" y1="165" x2="320" y2="118"/>
+                    <!-- labels -->
+                    <text class="dg-label" x="405" y="50">f(x)</text>
+                    <text class="dg-label-accent" x="300" y="88">tangent</text>
+                    <text class="dg-label" x="228" y="158">P</text>
+                    <text class="dg-label-muted" x="268" y="182">δ</text>
+                    <text class="dg-label-muted" x="326" y="145">f′(x)·δ</text>
+                </svg>
+                <figcaption>
+                    <strong>Figure 1.</strong> The derivative is the slope of the tangent line — the best
+                    straight-line model of a curve near a point: \(f(x+\delta)\approx f(x)+f'(x)\,\delta\).
+                    The Jacobian is this same idea in many dimensions at once.
+                </figcaption>
+            </figure>
+
+            <p>
+                In more than one dimension, "tangent line" becomes "tangent plane" (and, in higher
+                dimensions still, a tangent hyperplane). The Jacobian <em>is</em> that tangent map. It's
+                worth building the picture in your head, so here it is in 3D — a curved surface
+                \(z=f(x,y)\) and the flat sheet that best matches it at one point. Drag to orbit.
+            </p>
+
+            <figure class="figure threed">
+                <div class="threed-stage" id="jac3d">
+                    <div class="threed-fallback" id="jac3d-fallback">
+                        Interactive 3D needs WebGL — your browser or device seems to have it disabled.
+                        The idea: the Jacobian is the flat tangent plane that best matches a curved
+                        surface at a point.
+                    </div>
+                </div>
+                <figcaption>
+                    <strong>Figure 2.</strong> The Jacobian at a point is the <em>tangent plane</em>: the
+                    flat linear model that best matches the curved surface locally. Zoom out and it's a
+                    crude fit; zoom in and the surface and plane become indistinguishable — that's what
+                    "first-order approximation" means. <em>Drag to rotate.</em>
+                </figcaption>
+            </figure>
+
+            <h3>2.3 The chain rule: Jacobians of compositions multiply</h3>
+            <p>
+                A transformer is a <em>composition</em> of layers, so we need to know how Jacobians
+                behave under composition. If \(F = G \circ H\) (apply \(H\), then \(G\)), the multivariate
+                chain rule says the Jacobians simply multiply:
+            </p>
+            <div class="math-display">
+                \[
+                J_{F}(x) \;=\; J_{G}\big(H(x)\big)\,\cdot\,J_{H}(x).
+                \]
+            </div>
+            <p>
+                So the Jacobian of "layer \(\ell{+}1\), then \(\ell{+}2\), …, then \(L\)" is the product
+                of the individual layer Jacobians. One matrix summarizes the first-order effect of the
+                entire remaining network. (This is also, not coincidentally, exactly the quantity
+                backpropagation computes.)
+            </p>
+
+            <h2>3. The Jacobian Lens</h2>
+
+            <h3>3.1 The key move</h3>
+            <p>
+                Everything above layer \(\ell\) is a function that maps the layer-\(\ell\) activation to
+                the final activation. Freeze a prompt and a position and call that function \(F_\ell\):
+            </p>
+            <div class="math-display">
+                \[
+                h_{L,t} \;=\; F_\ell\big(h_{\ell,t}\big),
+                \qquad
+                F_\ell = (\text{layer } L) \circ \cdots \circ (\text{layer } \ell{+}1).
+                \]
+            </div>
+            <p>
+                The logit lens assumed \(F_\ell\) was the identity. The Jacobian Lens instead
+                <em>linearizes</em> \(F_\ell\) around the activation that actually occurred, using the
+                Jacobian from §2.2:
+            </p>
+            <div class="math-display">
+                \[
+                h_{L,t} \;\approx\; \underbrace{\frac{\partial h_{L,t}}{\partial h_{\ell,t}}}_{\text{Jacobian}}\; h_{\ell,t} \;+\; \text{const}.
+                \]
+            </div>
+            <p>
+                In words: to see what a layer-\(\ell\) vector <em>becomes</em> at the output, push it
+                through the derivative of the rest of the network. That derivative — a
+                \(d \times d\) matrix — is the transport map from layer \(\ell\)'s coordinate system into
+                the final layer's coordinate system. It is precisely the correction the logit lens was
+                missing.
+            </p>
+
+            <figure class="figure">
+                <svg viewBox="0 0 360 300" role="img" aria-label="A hidden vector pointing toward the cat axis is transported by the Jacobian to point toward the dog axis.">
+                    <!-- axes: coord 0 -> cat (x), coord 1 -> dog (y) -->
+                    <line class="dg-axis" x1="70" y1="250" x2="320" y2="250"/>
+                    <line class="dg-axis" x1="70" y1="250" x2="70" y2="40"/>
+                    <text class="dg-label-muted" x="250" y="272">coord 0 → “cat”</text>
+                    <text class="dg-label-muted" x="14" y="55">coord 1</text>
+                    <text class="dg-label-muted" x="6" y="72">→ “dog”</text>
+                    <!-- h_ell = (0.9, 0.2), origin (70,250), scale 180 -> (232, 214) -->
+                    <line class="dg-vec" x1="70" y1="250" x2="232" y2="214"/>
+                    <polygon class="dg-head" points="232,214 220,209 224,221"/>
+                    <text class="dg-label" x="236" y="212">h<tspan baseline-shift="sub" font-size="10">ℓ</tspan></text>
+                    <!-- J h = (0.45, 0.87) -> (151, 93.4) -->
+                    <line class="dg-vec-accent" x1="70" y1="250" x2="151" y2="93"/>
+                    <polygon class="dg-head-accent" points="151,93 146,107 158,101"/>
+                    <text class="dg-label-accent" x="120" y="84">J<tspan baseline-shift="sub" font-size="10">ℓ</tspan> h<tspan baseline-shift="sub" font-size="10">ℓ</tspan></text>
+                </svg>
+                <figcaption>
+                    <strong>Figure 3.</strong> The logit lens reads the raw hidden vector
+                    \(h_\ell\) (leaning toward “cat”). The transport map \(J_\ell\) rotates it into the
+                    output basis, where it actually leans toward “dog” — the token the model is poised to
+                    say. Same vector, different coordinate system; the Jacobian is the translator.
+                </figcaption>
+            </figure>
+
+            <h3>3.2 Averaging: from "verbalized" to "verbalizable"</h3>
+            <p>
+                A Jacobian computed at one activation is specific to that one prompt and position — and
+                individually those are noisy. The J-Lens instead uses the <strong>average</strong>
+                Jacobian over many source positions \(t\), many later positions \(t' \ge t\), and a large
+                corpus of prompts:
+            </p>
+            <div class="math-display">
+                \[
+                J_\ell \;=\; \mathbb{E}_{\,t,\; t' \ge t,\; \text{prompt}}
+                \left[\, \frac{\partial h_{\text{final},\,t'}}{\partial h_{\ell,\,t}} \,\right].
+                \]
+            </div>
+            <p>
+                This averaging is doing real conceptual work. A concept that only maps to a given word in
+                one specific context has been <em>verbalized</em> in that instance; a concept whose
+                average linear readout robustly points at a word is one the model is generally
+                <em>poised to verbalize</em> — a stable, context-independent property of the
+                representation. The expectation is what turns a one-off measurement into a reusable lens.
+            </p>
+
+            <h3>3.3 Reading a layer through the lens</h3>
+            <p>
+                With the averaged transport map \(J_\ell\) in hand, reading an activation is just the
+                logit-lens pipeline with the identity replaced by \(J_\ell\):
+            </p>
+            <div class="math-display">
+                \[
+                \text{lens}(h_\ell) \;=\; \operatorname{softmax}\!\Big(W_U\,\operatorname{norm}\big(J_\ell\, h_\ell\big)\Big).
+                \]
+            </div>
+            <p>
+                Compare this line to the logit lens in §1. The <em>only</em> change is the insertion of
+                \(J_\ell\): first linearly transport \(h_\ell\) to the output coordinate system, then
+                apply the model's own final normalization and unembedding to rank vocabulary tokens. The
+                downstream stack of layers has been swapped for a single, faithful, first-order stand-in.
+            </p>
+
+            <h2>4. A worked example you can check by hand</h2>
+            <p>
+                Let's make the whole mechanism concrete with the smallest example that still shows the
+                point. Take a model with width \(d=2\) and a vocabulary of just two tokens,
+                <strong>“cat”</strong> and <strong>“dog”</strong>. Let the unembedding be the identity,
+                so the readout just compares the two coordinates:
+            </p>
+            <div class="math-display">
+                \[
+                W_U = \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix},
+                \qquad
+                \text{logit}_{\text{cat}} = (\cdot)_0, \quad \text{logit}_{\text{dog}} = (\cdot)_1 .
+                \]
+            </div>
+            <p>
+                Suppose that at layer \(\ell\) the model has already decided it will say “dog”, but stores
+                that decision in a <em>rotated</em> internal basis, so the raw activation is
+            </p>
+            <div class="math-display">
+                \[
+                h_\ell = \begin{bmatrix} 0.9 \\ 0.2 \end{bmatrix}.
+                \]
+            </div>
+            <p>
+                Suppose further that the rest of the network, to first order, mixes the two coordinates
+                through this averaged transport map (we'll reuse it in §5):
+            </p>
+            <div class="math-display">
+                \[
+                J_\ell = \begin{bmatrix} 0.3 & 0.9 \\ 0.9 & 0.3 \end{bmatrix}.
+                \]
+            </div>
+            <p>
+                (We drop the nonlinear \(\operatorname{norm}\) here — it rescales but doesn't reorder the
+                two logits, so it can't change the winner in this example.) Now read the layer two ways:
+            </p>
+
+            <div class="compare">
+                <div>
+                    <p><strong>Logit lens</strong> — apply \(W_U\) directly:</p>
+                    <div class="math-display">
+                        \[
+                        W_U h_\ell = \begin{bmatrix} 0.9 \\ 0.2 \end{bmatrix}
+                        \]
+                    </div>
+                    <p>cat \(= 0.9\) &gt; dog \(= 0.2\).</p>
+                    <p class="verdict-wrong">Predicts “cat” ✗</p>
+                </div>
+                <div>
+                    <p><strong>Jacobian lens</strong> — transport first, then \(W_U\):</p>
+                    <div class="math-display">
+                        \[
+                        W_U J_\ell h_\ell = \begin{bmatrix} 0.45 \\ 0.87 \end{bmatrix}
+                        \]
+                    </div>
+                    <p>dog \(= 0.87\) &gt; cat \(= 0.45\).</p>
+                    <p class="verdict-right">Predicts “dog” ✓</p>
+                </div>
+            </div>
+
+            <p>
+                Working the arithmetic: \((J_\ell h_\ell)_0 = 0.3(0.9)+0.9(0.2)=0.45\) and
+                \((J_\ell h_\ell)_1 = 0.9(0.9)+0.3(0.2)=0.87\). The logit lens got it exactly backwards
+                because it read \(h_\ell\) in the wrong basis; the Jacobian lens applied the one matrix
+                that carries layer \(\ell\) into the output basis, and recovered the token the model was
+                actually poised to emit. That single \(2\times2\) matrix is doing the job of "the entire
+                upper half of the network, linearized." This is Figure 3, now with numbers.
+            </p>
+
+            <h2>5. Deeper: the spectrum of the transport map</h2>
+            <p>
+                A matrix is more than a lookup table of partials — it has <em>geometry</em>, and for the
+                Jacobian lens that geometry is the interpretability payoff. The clean way to see it is the
+                <strong>singular value decomposition</strong>. Any real matrix factors as
+            </p>
+            <div class="math-display">
+                \[
+                J_\ell = U\,\Sigma\,V^\top,
+                \qquad
+                \Sigma = \operatorname{diag}(\sigma_1 \ge \sigma_2 \ge \cdots \ge 0),
+                \]
+            </div>
+            <p>
+                with \(U, V\) orthogonal. Reading \(J_\ell\,x\) right-to-left tells a three-step story:
+                \(V^\top\) <em>measures</em> the input along an orthonormal set of <em>right singular
+                directions</em> \(v_i\); \(\Sigma\) <em>scales</em> each component by \(\sigma_i\); and
+                \(U\) <em>writes</em> the result along <em>left singular directions</em> \(u_i\). A unit
+                sphere of inputs comes out as an ellipsoid whose axes are the \(u_i\) with lengths
+                \(\sigma_i\):
+            </p>
+
+            <figure class="figure">
+                <svg viewBox="0 0 360 300" role="img" aria-label="A unit circle mapped by the matrix into an ellipse, with the singular-value axes drawn.">
+                    <!-- center (180,150), scale 70 px/unit -->
+                    <!-- unit circle (input) -->
+                    <circle class="dg-ghost" cx="180" cy="150" r="70"/>
+                    <!-- output ellipse: semi-axes sigma1=1.2 (@45deg), sigma2=0.6 (@-45deg) -->
+                    <ellipse class="dg-fill" cx="180" cy="150" rx="84" ry="42" transform="rotate(-45 180 150)"/>
+                    <!-- sigma1 axis: direction (1,1)/sqrt2, length 84 -> (239,91) -->
+                    <line class="dg-vec-accent" x1="180" y1="150" x2="239" y2="91"/>
+                    <polygon class="dg-head-accent" points="239,91 227,95 235,103"/>
+                    <text class="dg-label-accent" x="243" y="86">σ₁ u₁ (×1.2)</text>
+                    <!-- sigma2 axis: direction (1,-1)/sqrt2, length 42 -> (210,180) -->
+                    <line class="dg-vec" x1="180" y1="150" x2="210" y2="180"/>
+                    <polygon class="dg-head" points="210,180 199,177 203,188"/>
+                    <text class="dg-label" x="214" y="196">σ₂ u₂ (×0.6)</text>
+                    <text class="dg-label-muted" x="120" y="234">unit circle → ellipse</text>
+                </svg>
+                <figcaption>
+                    <strong>Figure 4.</strong> What the transport map
+                    \(J_\ell=\left[\begin{smallmatrix}0.3&0.9\\0.9&0.3\end{smallmatrix}\right]\) does to
+                    space: it stretches the \((1,1)\) direction by \(\sigma_1=1.2\) and squeezes the
+                    \((1,-1)\) direction by \(\sigma_2=0.6\). Directions with large \(\sigma\) survive the
+                    trip to the output; small-\(\sigma\) directions are attenuated toward irrelevance.
+                </figcaption>
+            </figure>
+
+            <p>
+                For our example \(J_\ell\) is symmetric, so its singular values are the magnitudes of its
+                eigenvalues, \(\sigma_1=1.2\) and \(\sigma_2=0.6\), along the eigenvectors
+                \(v_1=\tfrac{1}{\sqrt2}(1,1)\) and \(v_2=\tfrac{1}{\sqrt2}(1,-1)\). The interpretability
+                reading is direct: <strong>the large-\(\sigma\) singular directions are the concept
+                directions the model is most poised to verbalize</strong>. A feature aligned with \(v_1\)
+                is amplified on its way to the vocabulary; a feature aligned with \(v_2\) is muffled. The
+                lens isn't just relocating the vector — its spectrum ranks <em>which</em> internal
+                directions get a loud voice at the output.
+            </p>
+
+            <h3>5.1 What "averaging a Jacobian" actually means</h3>
+            <p>
+                One subtlety worth stating plainly: the averaged \(J_\ell\) of §3.2 is
+                <em>not</em> the Jacobian of any single function. It is a mean of linear operators, one per
+                context, collapsed into a single representative operator:
+                \(J_\ell=\mathbb{E}[\,J_\ell^{(\text{context})}\,]\). Directions along which the model
+                <em>consistently</em> routes a concept to the same output token survive the averaging;
+                directions that point every which way across contexts cancel. So the expectation is a
+                noise filter with a precise meaning — it keeps the <em>stable, context-independent</em>
+                part of the readout, which is exactly what "a concept the model is generally poised to
+                verbalize" should mean.
+            </p>
+
+            <h3>5.2 A note on rigor</h3>
+            <p>
+                "Best linear approximation" has an exact definition worth keeping honest. \(F\) is
+                differentiable at \(x\) with Jacobian \(J\) iff
+            </p>
+            <div class="math-display">
+                \[
+                F(x+\delta) = F(x) + J\,\delta + o(\lVert\delta\rVert)
+                \quad\text{as } \lVert\delta\rVert \to 0,
+                \]
+            </div>
+            <p>
+                i.e. the leftover shrinks <em>faster than linearly</em> in the perturbation size — that
+                \(o(\lVert\delta\rVert)\) is the entire content of "first order." The lens's affine
+                constant is then pinned down as \(\text{const}=F(x)-Jx\), the expansion evaluated at the
+                chosen base point. And note we keep the model's final \(\operatorname{norm}\) <em>outside</em>
+                \(J_\ell\) rather than linearizing it too: it is genuinely nonlinear, and folding it in
+                would blur the clean linear-transport story for little gain. That's a modeling choice, not
+                a theorem — the kind of seam worth knowing is there. (No functional analysis required:
+                everything here lives in finite-dimensional \(\mathbb{R}^d\), where the Jacobian
+                <em>is</em> the total derivative.)
+            </p>
+
+            <h2>6. Why the Jacobian is the right tool here</h2>
+            <p>
+                It's worth being explicit about <em>why</em> this particular object — and not some other
+                summary of the network — is the correct one. Four reasons stack up.
+            </p>
+
+            <h3>4.1 It answers a causal question</h3>
+            <p>
+                Interpretability wants to know what a representation <em>does</em>, not just what it
+                correlates with. The Jacobian \(\partial h_{L}/\partial h_{\ell}\) is by definition the
+                first-order causal effect of the representation on the output: it says how the model's
+                final state would move if you perturbed the hidden state. "Which concepts is the model
+                poised to verbalize" is a causal question, and the Jacobian is the linear-order answer to
+                it.
+            </p>
+
+            <h3>4.2 Linear, and therefore composable and decodable</h3>
+            <p>
+                The final unembedding \(W_U\) is a linear map. A linear transport map \(J_\ell\) composes
+                with it cleanly (§2.3), so the lens stays a single interpretable matrix product all the
+                way to the vocabulary. A nonlinear summary would not slot into the \(W_U\) decoder like
+                this. Linearity is not a loss of ambition here — it is what makes the readout legible.
+            </p>
+
+            <h3>4.3 It corrects the basis drift automatically</h3>
+            <p>
+                The whole failure of the logit lens was that intermediate layers don't share the output
+                basis. But the transformation between those bases is <em>exactly</em> what the derivative
+                of the intervening layers encodes. So \(J_\ell\) doesn't just approximate the rest of the
+                network — the specific thing it captures, the change of coordinates from layer \(\ell\) to
+                the output, is the precise correction the logit lens omitted. The tool is matched to the
+                disease.
+            </p>
+
+            <h3>4.4 Averaging separates stable structure from noise</h3>
+            <p>
+                Because the Jacobian is well-defined per example, it can be <em>averaged</em> in a
+                principled way (§3.2). That expectation is what lets the method distinguish a
+                representation that is genuinely, repeatably readable as a concept from one that happened
+                to align with a token once. This is the property that lets the authors surface meaningful
+                content in early layers where the logit lens only saw noise — and, ultimately, to argue
+                that verbalizable representations form a shared "global workspace" inside the model.
+            </p>
+
+            <h2>7. Where the math lets you challenge it</h2>
+            <p>
+                The Jacobian lens is built on two approximations stacked on top of each other —
+                <em>linearize</em>, then <em>average</em> — and each one opens a specific line of attack.
+                If you wanted to poke holes in the method (or design the experiment that finds its
+                failure mode), here is the mathematical attack surface. Each challenge below comes with a
+                concrete way to test it.
+            </p>
+
+            <h3>7.1 A tangent used far from where it is tangent</h3>
+            <p>
+                The differentiability guarantee is strictly local:
+                \(F(x+\delta)=F(x)+J\delta+o(\lVert\delta\rVert)\) holds only as
+                \(\lVert\delta\rVert\to 0\). But the reading \(\text{lens}(h_\ell)=\operatorname{softmax}(W_U\operatorname{norm}(J_\ell h_\ell))\)
+                applies \(J_\ell\) to the <em>entire</em> activation \(h_\ell\), which has finite — often
+                large — norm. In effect \(\delta\) <em>is</em> the whole vector, so the
+                \(o(\lVert\delta\rVert)\) control is vacuous. The discarded second-order term is governed
+                by the Hessian \(H\),
+            </p>
+            <div class="math-display">
+                \[
+                F(x+\delta) = F(x) + J\delta + \tfrac12\,\delta^\top H\,\delta + \cdots,
+                \]
+            </div>
+            <p>
+                and for a deep, sharply-curved \(F\) that quadratic term need not be small. So the lens is
+                extrapolating a tangent plane far from its point of tangency — exactly the regime where
+                Figure 2 stops being a good fit.
+                <strong>Test it:</strong> measure the linearization fidelity per layer,
+                \(\rho_\ell = \lVert F_\ell(h_\ell) - (J_\ell h_\ell + c_\ell)\rVert \,/\, \lVert F_\ell(h_\ell)\rVert\).
+                Where \(\rho_\ell\) is not \(\ll 1\) (suspect the early layers), the lens's tokens are not
+                first-order justified.
+            </p>
+
+            <h3>7.2 The saturation blind spot: decisive features with zero gradient</h3>
+            <p>
+                A Jacobian measures <em>sensitivity</em>, not <em>use</em>. If a feature drives the output
+                through a <em>saturated</em> nonlinearity — a softmax already near one-hot, a GELU/ReLU
+                sitting in its flat region — then by the chain rule its contribution to \(J_\ell\) is
+                multiplied by \(\sigma'(z)\approx 0\) and vanishes, even though the feature may
+                <em>fully determine</em> the output. The lens is therefore blind precisely to information
+                the model has already <em>committed</em> to, arguably the most important content at that
+                point in the computation. Put sharply: <strong>J-Lens shows you what is still movable, not
+                what is already settled.</strong> A concept can be maximally verbalized and yet have a
+                near-zero Jacobian. This is the deepest conceptual objection, because it is not noise —
+                it is a systematic bias baked into using a derivative as a readout.
+            </p>
+
+            <h3>7.3 The averaged operator is the Jacobian of nothing</h3>
+            <p>
+                \(J_\ell=\mathbb{E}[\,J_\ell^{(c)}\,]\) is a mean of per-context matrices, but the
+                linearization point co-varies with the context \(c\). In general
+            </p>
+            <div class="math-display">
+                \[
+                \mathbb{E}_c\big[\,J_\ell^{(c)}\,\big]\, h \;\neq\; \mathbb{E}_c\big[\,J_\ell^{(c)} h^{(c)}\,\big],
+                \]
+            </div>
+            <p>
+                so the averaged map need not describe <em>any</em> real forward pass — it is a
+                representative fiction. Worse is <strong>cancellation</strong>: if one context routes a
+                concept direction \(v\) toward a token and another routes it the opposite way, the two
+                contributions annul in the mean, and the lens reports \(J_\ell v \approx 0\) — "not
+                verbalizable" — for something that is verbalized in <em>every</em> context, just
+                context-dependently. That is a false negative created by the averaging itself.
+                <strong>Test it:</strong> compare \(\lVert\mathbb{E}[J_\ell^{(c)}]\rVert\) against the
+                per-context spread \(\mathbb{E}\lVert J_\ell^{(c)}-J_\ell\rVert\); when the spread rivals
+                the mean, the single \(J_\ell\) is not representing a stable computation.
+            </p>
+
+            <h3>7.4 Spectral blind subspaces</h3>
+            <p>
+                This one falls straight out of §5. Reading through \(J_\ell=U\Sigma V^\top\), any part of
+                \(h_\ell\) lying along a right-singular vector \(v_i\) with \(\sigma_i\approx 0\) is
+                annihilated before it ever reaches the vocabulary. So the lens has a <em>blind
+                subspace</em> — the span of the small-\(\sigma\) right-singular vectors — and information
+                stored there is invisible <em>no matter how real it is</em>. The catch is that a
+                <em>nonlinear</em> downstream step could later amplify one of those very directions; a
+                linear average simply cannot represent "small now, amplified after the next nonlinearity."
+                The lens's silence about a direction is evidence of nothing. And because the readout
+                \(W_U J_\ell\) is many-to-one (nontrivial nullspace), the converse fails too: a token
+                lighting up does not prove the model <em>contains</em> that concept, only that
+                <em>something</em> projected onto it — the standard interpretability-illusion risk.
+            </p>
+
+            <h3>7.5 The mundane ones</h3>
+            <p>
+                Less deep but worth stating: the final \(\operatorname{norm}\) is genuinely nonlinear and
+                is kept outside \(J_\ell\) as a modeling choice, not a derived fact; and estimating a full
+                \(d\times d\) Jacobian across many positions and prompts is far costlier than the free
+                logit lens. The payoff is signal in the layers the logit lens throws away — but you are
+                paying for it, and you are trusting the four approximations above to buy it.
+            </p>
+
+            <div class="callout">
+                <p>
+                    <strong>The honest framing.</strong> None of this sinks the method; it locates it.
+                    The Jacobian lens is a <em>first-order, on-average, causal</em> readout, and it is most
+                    trustworthy in exactly the regime where those three qualifiers bite least: layers that
+                    are well-conditioned (few tiny \(\sigma_i\)), features that are unsaturated (nonzero
+                    gradient), and computations that are consistent across contexts (little cancellation).
+                    Read as a <em>hypothesis generator</em> to be confirmed causally, it is powerful. Read
+                    as ground truth about what a layer "contains," it will occasionally lie — and §§7.1–7.4
+                    tell you where to look for the lies.
+                </p>
+            </div>
+
+            <h2>8. The one-sentence version</h2>
+            <p>
+                The logit lens reads a hidden layer by pretending the rest of the network is the identity;
+                the <strong>Jacobian Lens</strong> reads it by replacing the rest of the network with its
+                averaged derivative — the single linear map that transports an intermediate representation
+                into the output vocabulary — and that derivative is the right tool because it is causal,
+                linear, basis-correcting, and averageable.
+            </p>
+
+            <hr>
+            <div class="post-refs">
+                <p>
+                    <strong>Reference.</strong> Wes Gurnee, Nicholas Sofroniew, Adam Pearce, et&nbsp;al.,
+                    <em>“Verbalizable Representations Form a Global Workspace in Language Models,”</em>
+                    Anthropic / Transformer Circuits, July 2026 —
+                    <a href="https://transformer-circuits.pub/2026/workspace/" target="_blank" rel="noopener">transformer-circuits.pub/2026/workspace</a>.
+                    The definition of \(J_\ell\) and the reading equation follow that work; the
+                    explanatory framing here is my own.
+                </p>
+            </div>
+
+            <a href="index.html#blogs" class="back-link" style="margin-top:2rem;">← Back to blogs</a>
+        </article>
+    </div>
+
+    <!-- Minimal theme toggle (standalone page; no section switching needed) -->
+    <script>
+        (function () {
+            var root = document.documentElement;
+            var btn = document.querySelector('.theme-toggle');
+            if (!btn) return;
+            btn.addEventListener('click', function () {
+                var dark = root.getAttribute('data-theme') === 'dark';
+                if (dark) { root.removeAttribute('data-theme'); localStorage.setItem('theme', 'light'); }
+                else { root.setAttribute('data-theme', 'dark'); localStorage.setItem('theme', 'dark'); }
+                if (window.__jacRefreshTheme) window.__jacRefreshTheme();
+            });
+        })();
+    </script>
+
+    <!-- Figure 2: interactive tangent-plane (Jacobian = best linear approximation) -->
+    <script type="module">
+        const stage = document.getElementById('jac3d');
+        const fallback = document.getElementById('jac3d-fallback');
+
+        // A saddle surface z = 0.4 (x^2 - y^2); its Jacobian at a point is the tangent plane.
+        const A = 0.4;
+        const f  = (x, y) => A * (x * x - y * y);
+        const fx = (x)    => 2 * A * x;   // ∂f/∂x
+        const fy = (y)    => -2 * A * y;  // ∂f/∂y
+        const P = { x: 1.0, y: 0.6 };     // base point
+
+        function cssVar(name, fallbackColor) {
+            const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+            return v || fallbackColor;
+        }
+
+        let THREE, renderer, scene, camera, controls, surface, plane, dot, gridLines;
+
+        init();
+
+        async function init() {
+            try {
+                THREE = await import('three');
+                const { OrbitControls } = await import('three/addons/controls/OrbitControls.js');
+                if (!THREE || !window.WebGLRenderingContext) throw new Error('no webgl');
+
+                renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                sizeRenderer();
+                stage.appendChild(renderer.domElement);
+                fallback.style.display = 'none';
+
+                scene = new THREE.Scene();
+                camera = new THREE.PerspectiveCamera(45, aspect(), 0.1, 100);
+                camera.position.set(3.2, 2.6, 3.4);
+
+                controls = new OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.enablePan = false;
+                controls.minDistance = 2.5;
+                controls.maxDistance = 9;
+
+                scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+                const key = new THREE.DirectionalLight(0xffffff, 0.9);
+                key.position.set(4, 6, 3);
+                scene.add(key);
+
+                buildScene();
+                window.__jacRefreshTheme = applyThemeColors;
+                applyThemeColors();
+
+                window.addEventListener('resize', onResize);
+                animate();
+            } catch (e) {
+                // Leave the fallback message visible.
+                if (fallback) fallback.style.display = 'flex';
+            }
+        }
+
+        function aspect() {
+            const r = stage.getBoundingClientRect();
+            return (r.width || 480) / (r.height || 300);
+        }
+        function sizeRenderer() {
+            const r = stage.getBoundingClientRect();
+            renderer.setSize(r.width, r.height); // updateStyle=true so CSS size matches buffer
+        }
+
+        function buildScene() {
+            // Surface mesh over [-2,2]^2 mapped to Three coords (x, height, y)
+            const N = 48, S = 2;
+            const geo = new THREE.PlaneGeometry(2 * S, 2 * S, N, N);
+            const pos = geo.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                const gx = pos.getX(i), gy = pos.getY(i);
+                pos.setXYZ(i, gx, f(gx, gy), gy); // lift into height
+            }
+            geo.computeVertexNormals();
+            surface = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+                transparent: true, opacity: 0.55, roughness: 0.85,
+                side: THREE.DoubleSide, flatShading: false
+            }));
+            scene.add(surface);
+
+            // Wireframe overlay for readability
+            gridLines = new THREE.LineSegments(
+                new THREE.WireframeGeometry(geo),
+                new THREE.LineBasicMaterial({ transparent: true, opacity: 0.18 })
+            );
+            scene.add(gridLines);
+
+            // Tangent plane at P: normal = (-fx, 1, -fy) in (x, height, y) coords
+            const planeGeo = new THREE.PlaneGeometry(2.2, 2.2, 1, 1);
+            plane = new THREE.Mesh(planeGeo, new THREE.MeshStandardMaterial({
+                transparent: true, opacity: 0.5, roughness: 0.4,
+                side: THREE.DoubleSide, metalness: 0.0
+            }));
+            const n = new THREE.Vector3(-fx(P.x), 1, -fy(P.y)).normalize();
+            plane.position.set(P.x, f(P.x, P.y), P.y);
+            plane.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), n);
+            scene.add(plane);
+
+            // Point of tangency
+            dot = new THREE.Mesh(
+                new THREE.SphereGeometry(0.07, 24, 24),
+                new THREE.MeshStandardMaterial({ roughness: 0.3 })
+            );
+            dot.position.set(P.x, f(P.x, P.y), P.y);
+            scene.add(dot);
+        }
+
+        function applyThemeColors() {
+            if (!surface) return;
+            const link = cssVar('--color-link', '#0066cc');
+            const text = cssVar('--color-text', '#1a1a1a');
+            const accent = '#e8833a';
+            surface.material.color.set(link);
+            gridLines.material.color.set(text);
+            plane.material.color.set(accent);
+            dot.material.color.set(accent);
+        }
+
+        function onResize() {
+            if (!renderer) return;
+            sizeRenderer();
+            camera.aspect = aspect();
+            camera.updateProjectionMatrix();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (controls) controls.update();
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>

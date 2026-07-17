@@ -415,4 +415,210 @@ ul, ol {
     .data-table td {
         font-size: 0.95rem;
     }
+
+    .post-title {
+        font-size: 1.6rem;
+    }
+}
+
+/* ========================================
+   Blog Post
+   ======================================== */
+.post {
+    max-width: var(--max-width);
+}
+
+.back-link {
+    display: inline-block;
+    margin-bottom: 2.5rem;
+    font-size: 0.95rem;
+    color: var(--color-text-secondary);
+}
+
+.post-title {
+    font-size: 2rem;
+    font-weight: 600;
+    line-height: 1.25;
+    margin-bottom: 0.6rem;
+}
+
+.post-meta {
+    color: var(--color-muted);
+    font-size: 0.95rem;
+    margin-bottom: 2.5rem;
+}
+
+.post-lede {
+    font-size: 1.1rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 2rem;
+}
+
+.post h2 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin-top: 2.75rem;
+    margin-bottom: 1rem;
+}
+
+.post h3 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin-top: 1.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.post p {
+    margin-bottom: 1.15rem;
+}
+
+.post ul, .post ol {
+    margin: 0 0 1.15rem 1.5rem;
+}
+
+.post li {
+    margin-bottom: 0.5rem;
+}
+
+.post blockquote {
+    border-left: 3px solid var(--color-border);
+    padding-left: 1.1rem;
+    margin: 1.5rem 0;
+    color: var(--color-text-secondary);
+    font-style: italic;
+}
+
+.post code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.85em;
+    background: var(--color-border);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+}
+
+/* Horizontal scroll for wide display equations on small screens */
+.post .math-display {
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin: 1.5rem 0;
+    padding: 0.4rem 0;
+}
+
+.post hr {
+    border: none;
+    border-top: 1px solid var(--color-border);
+    margin: 2.75rem 0;
+}
+
+.post .callout {
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin: 1.75rem 0;
+    background: rgba(127, 127, 127, 0.07);
+}
+
+.post .callout p:last-child {
+    margin-bottom: 0;
+}
+
+.post .footnote-ref {
+    font-size: 0.75em;
+    vertical-align: super;
+    line-height: 0;
+}
+
+.post-refs {
+    margin-top: 2rem;
+    font-size: 0.95rem;
+    color: var(--color-text-secondary);
+}
+
+/* ---- Figures & diagrams ---- */
+.figure {
+    margin: 2rem 0;
+}
+
+.figure svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+.figure figcaption {
+    font-size: 0.9rem;
+    color: var(--color-muted);
+    margin-top: 0.75rem;
+    text-align: center;
+    line-height: 1.5;
+}
+
+/* SVG diagram element classes (theme-aware via CSS variables) */
+.dg-grid   { stroke: var(--color-border); stroke-width: 1; }
+.dg-axis   { stroke: var(--color-muted); stroke-width: 1.5; }
+.dg-curve  { stroke: var(--color-link); stroke-width: 2.5; fill: none; }
+.dg-tangent{ stroke: #e8833a; stroke-width: 2; stroke-dasharray: 6 4; fill: none; }
+.dg-ghost  { stroke: var(--color-muted); stroke-width: 1.5; stroke-dasharray: 4 4; fill: none; }
+.dg-vec    { stroke: var(--color-text); stroke-width: 2.5; }
+.dg-vec-accent { stroke: #e8833a; stroke-width: 2.5; }
+.dg-fill   { fill: var(--color-link); fill-opacity: 0.10; stroke: var(--color-link); stroke-width: 2; }
+.dg-dot    { fill: var(--color-text); }
+.dg-dot-accent { fill: #e8833a; }
+.dg-head   { fill: var(--color-text); }
+.dg-head-accent { fill: #e8833a; }
+.dg-label      { fill: var(--color-text); font-family: var(--font-body); font-size: 14px; }
+.dg-label-muted{ fill: var(--color-muted); font-family: var(--font-body); font-size: 13px; }
+.dg-label-accent { fill: #e8833a; font-family: var(--font-body); font-size: 14px; }
+
+/* ---- Worked-example comparison box ---- */
+.compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 1.75rem 0;
+}
+
+.compare > div {
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 1rem 1.1rem;
+}
+
+.compare .verdict-wrong { color: #c0392b; font-weight: 600; }
+.compare .verdict-right { color: #1e8449; font-weight: 600; }
+
+@media (max-width: 600px) {
+    .compare { grid-template-columns: 1fr; }
+}
+
+/* ---- Interactive 3D ---- */
+.threed {
+    margin: 2rem 0;
+}
+
+.threed-stage {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: rgba(127, 127, 127, 0.04);
+    touch-action: none;
+}
+
+.threed-stage canvas { display: block; width: 100% !important; height: 100% !important; }
+
+.threed-fallback {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    text-align: center;
+    color: var(--color-muted);
+    font-size: 0.95rem;
 }
