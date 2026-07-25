@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="An accessible explanation of the Fable 5 counterexample to the Jacobian conjecture: the statement, the exact calculation, why it works, and why it took 87 years to find.">
+    <title>A Local Truth, Globally False: Fable 5 and the Jacobian Conjecture — Dante Lok</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script>
+        (function () {
+            var saved = localStorage.getItem('theme');
+            var dark = saved ? saved === 'dark'
+                : window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+        })();
+    </script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['\\(', '\\)']],
+                displayMath: [['\\[', '\\]']]
+            },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="name">Dante Lok</h1>
+            <nav class="nav" aria-label="Primary navigation">
+                <a href="index.html#home" class="nav-link">Home</a>
+                <a href="index.html#blogs" class="nav-link active">Blogs</a>
+                <a href="index.html#publications" class="nav-link">Publications</a>
+                <a href="index.html#projects" class="nav-link">Projects</a>
+            </nav>
+            <button class="theme-toggle" type="button" aria-label="Toggle dark mode">
+                <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <circle cx="12" cy="12" r="5"/>
+                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                </svg>
+                <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+            </button>
+        </header>
+
+        <article class="post section active counterexample-post">
+            <a href="index.html#blogs" class="back-link">← Back to blogs</a>
+
+            <p class="post-kicker">AI for mathematics · A checkable counterexample</p>
+            <h1 class="post-title">A Local Truth, Globally False: Fable 5 and the Jacobian Conjecture</h1>
+            <p class="post-meta"><time datetime="2026-07-25">25 July 2026</time> · ~13 min read</p>
+
+            <p class="post-lede">
+                For 87 years, the Jacobian conjecture said that a polynomial map which is invertible
+                in every tiny neighborhood must also be invertible everywhere. In July 2026, a
+                three-variable map credited to Claude Fable 5 broke that bridge between local and
+                global behavior. The verification fits on a page. Finding the map was the hard part.
+            </p>
+
+            <div class="result-banner" role="note" aria-label="Current status">
+                <p class="result-label">Status</p>
+                <p>
+                    The displayed map has been independently and formally verified. The general
+                    conjecture is false in dimensions \(n\geq 3\); the two-dimensional case remains open.
+                    <a href="https://isa-afp.org/entries/Jacobian_Counterexample.html" target="_blank" rel="noopener">Isabelle/HOL verification ↗</a>
+                </p>
+            </div>
+
+            <h2>1. What did the Jacobian conjecture say?</h2>
+
+            <p>
+                Start with a polynomial map
+                \(F:\mathbb{C}^{n}\rightarrow\mathbb{C}^{n}\). It takes \(n\) complex inputs and
+                returns \(n\) complex outputs:
+            </p>
+
+            <div class="math-display">
+                \[
+                F(x_1,\ldots,x_n)
+                =
+                \big(F_1(x_1,\ldots,x_n),\ldots,F_n(x_1,\ldots,x_n)\big).
+                \]
+            </div>
+
+            <p>
+                Its Jacobian matrix records every first-order response of every output to every input:
+            </p>
+
+            <div class="math-display">
+                \[
+                J_F(x)
+                =
+                \left[
+                \frac{\partial F_i}{\partial x_j}(x)
+                \right]_{i,j=1}^{n}.
+                \]
+            </div>
+
+            <p>
+                The determinant \(\det J_F(x)\) measures whether the map crushes a tiny volume to zero
+                near \(x\). If the determinant is nonzero, the inverse function theorem gives a local
+                inverse: close enough to \(x\), no two points are folded together.
+            </p>
+
+            <div class="theorem-box">
+                <p class="theorem-label">Jacobian conjecture, Keller 1939</p>
+                <p>
+                    If \(F:\mathbb{C}^{n}\to\mathbb{C}^{n}\) is polynomial and
+                    \(\det J_F\) is a nonzero constant, then \(F\) has a polynomial inverse.
+                </p>
+            </div>
+
+            <p>
+                The hypothesis is local; the conclusion is global. That leap is the whole conjecture.
+                A determinant can tell us that each small patch is mapped cleanly. It does not obviously
+                tell us whether two far-apart patches can land on the same place.
+            </p>
+
+            <figure class="figure">
+                <svg viewBox="0 0 600 240" role="img" aria-labelledby="local-global-title local-global-desc">
+                    <title id="local-global-title">Local invertibility versus global injectivity</title>
+                    <desc id="local-global-desc">Three separate input neighborhoods are each mapped cleanly, but their center points share one output.</desc>
+                    <path class="dg-ghost" d="M75 48 C150 48, 185 98, 272 120"/>
+                    <path class="dg-ghost" d="M75 120 C155 120, 195 120, 272 120"/>
+                    <path class="dg-ghost" d="M75 192 C150 192, 185 142, 272 120"/>
+                    <circle class="dg-fill" cx="70" cy="48" r="24"/>
+                    <circle class="dg-fill" cx="70" cy="120" r="24"/>
+                    <circle class="dg-fill" cx="70" cy="192" r="24"/>
+                    <circle class="dg-dot-accent" cx="70" cy="48" r="4.5"/>
+                    <circle class="dg-dot-accent" cx="70" cy="120" r="4.5"/>
+                    <circle class="dg-dot-accent" cx="70" cy="192" r="4.5"/>
+                    <path class="dg-vec-accent" d="M292 120 L510 120"/>
+                    <polygon class="dg-head-accent" points="510,120 496,113 496,127"/>
+                    <circle class="dg-dot-accent" cx="535" cy="120" r="6"/>
+                    <text class="dg-label" x="20" y="18">three clean local patches</text>
+                    <text class="dg-label-muted" x="250" y="100">far apart globally</text>
+                    <text class="dg-label" x="455" y="93">one shared output</text>
+                </svg>
+                <figcaption>
+                    A map may have a valid inverse around every individual input and still fail to have
+                    one inverse for the whole space. The counterexample realizes exactly this picture.
+                </figcaption>
+            </figure>
+
+            <h3>A friendly example where the conjecture works</h3>
+
+            <p>
+                Consider \(F(x,y)=(x+y^2,y)\). Its Jacobian is triangular:
+            </p>
+
+            <div class="math-display">
+                \[
+                J_F
+                =
+                \begin{bmatrix}
+                1 &amp; 2y\\
+                0 &amp; 1
+                \end{bmatrix},
+                \qquad
+                \det J_F=1.
+                \]
+            </div>
+
+            <p>
+                And it really does have the polynomial inverse \(F^{-1}(a,b)=(a-b^2,b)\).
+                Examples like this support the conjecture's intuition: never crush local volume, and
+                perhaps the map can always be undone.
+            </p>
+
+            <div class="scope-strip" aria-label="Scope by dimension">
+                <div>
+                    <p class="scope-dimension">\(n=1\)</p>
+                    <p class="scope-status is-settled">True</p>
+                    <p>A polynomial with nonzero constant derivative is linear.</p>
+                </div>
+                <div>
+                    <p class="scope-dimension">\(n=2\)</p>
+                    <p class="scope-status is-open">Still open</p>
+                    <p>The plane Jacobian conjecture survives.</p>
+                </div>
+                <div>
+                    <p class="scope-dimension">\(n\geq 3\)</p>
+                    <p class="scope-status is-false">False</p>
+                    <p>The new \(3\)-D example extends by adding identity coordinates.</p>
+                </div>
+            </div>
+
+            <div class="callout">
+                <p>
+                    <strong>Scope and assumptions.</strong> This is a statement about polynomial maps
+                    over the complex numbers, or more generally fields of characteristic zero. It is
+                    not a claim about arbitrary smooth functions. The determinant can be normalized
+                    from any nonzero constant to \(1\) by rescaling one output coordinate.
+                </p>
+            </div>
+
+            <h2>2. What did Fable introduce?</h2>
+
+            <p>
+                On 19–20 July 2026, mathematician Levent Alpöge
+                <a href="https://x.com/__alpoge__/status/2079028340955197566" target="_blank" rel="noopener">posted an explicit map ↗</a>,
+                thanking Akhil Mathew for raising the question and crediting
+                <a href="https://www.anthropic.com/claude/fable" target="_blank" rel="noopener">Claude Fable 5 ↗</a>,
+                Anthropic's model for long-running knowledge work, for the work that produced it.
+                Write \(u=1+xy\), and define
+                \(F=(F_1,F_2,F_3):\mathbb{C}^{3}\to\mathbb{C}^{3}\) by
+            </p>
+
+            <div class="math-display counterexample-equation">
+                \[
+                \begin{aligned}
+                F_1(x,y,z)
+                    &amp;= (1+xy)^3z+y^2(1+xy)(4+3xy),\\
+                F_2(x,y,z)
+                    &amp;= y+3x(1+xy)^2z+3xy^2(4+3xy),\\
+                F_3(x,y,z)
+                    &amp;= 2x-3x^2y-x^3z.
+                \end{aligned}
+                \]
+            </div>
+
+            <p>
+                These are ordinary polynomials. The highest total degree is \(7\). Two exact checks do
+                all the logical work.
+            </p>
+
+            <div class="proof-ledger" aria-label="Counterexample verification">
+                <div>
+                    <p class="proof-step">01 · Hypothesis</p>
+                    <p class="proof-result">\(\det J_F\equiv -2\)</p>
+                    <p>The determinant is constant and never zero, so \(F\) is locally invertible everywhere.</p>
+                </div>
+                <div>
+                    <p class="proof-step">02 · Failed conclusion</p>
+                    <p class="proof-result">Three inputs, one output</p>
+                    <p>The map is not injective, so no global inverse—polynomial or otherwise—can exist.</p>
+                </div>
+            </div>
+
+            <div class="table-scroll" tabindex="0" role="region" aria-label="Three colliding points">
+                <table class="fiber-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Input</th>
+                            <th scope="col">Coordinates</th>
+                            <th scope="col">Output under \(F\)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th scope="row">\(p_0\)</th>
+                            <td>\(\left(0,0,-\frac14\right)\)</td>
+                            <td>\(\left(-\frac14,0,0\right)\)</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">\(p_+\)</th>
+                            <td>\(\left(1,-\frac32,\frac{13}{2}\right)\)</td>
+                            <td>\(\left(-\frac14,0,0\right)\)</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">\(p_-\)</th>
+                            <td>\(\left(-1,\frac32,\frac{13}{2}\right)\)</td>
+                            <td>\(\left(-\frac14,0,0\right)\)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Why this immediately disproves the conjecture</h3>
+
+            <p>
+                Suppose an inverse \(G\) existed. Applying it to the shared output would give
+            </p>
+
+            <div class="math-display">
+                \[
+                G\!\left(-\frac14,0,0\right)
+                =
+                G(F(p_0))
+                =
+                p_0,
+                \]
+            </div>
+
+            <p>
+                but the same reasoning would force that one value of \(G\) to equal \(p_+\) and \(p_-\)
+                as well. A function cannot return three different answers for one input. Therefore
+                \(F\) is not invertible. Since its Jacobian determinant is nevertheless a nonzero
+                constant, it is a counterexample.
+            </p>
+
+            <details class="derivation">
+                <summary>Show me a compact determinant check</summary>
+                <div class="derivation-body">
+                    <p>
+                        The cancellation is easier to see after introducing
+                        \[
+                        u=1+xy,
+                        \qquad
+                        W=u^2z+y^2(3u+1).
+                        \]
+                        Then \(F_1=uW\) and \(F_2=y+3xW\). On the dense region where \(xu\neq0\),
+                        use \((x,u,W)\) as coordinates. The first coordinate change has determinant
+                    </p>
+                    <div class="math-display">
+                        \[
+                        \det\frac{\partial(x,u,W)}{\partial(x,y,z)}
+                        =xu^2.
+                        \]
+                    </div>
+                    <p>
+                        In these coordinates,
+                        \[
+                        F
+                        =
+                        \left(
+                        uW,\;
+                        \frac{u-1}{x}+3xW,\;
+                        \frac{x(u+1-x^2W)}{u^2}
+                        \right),
+                        \]
+                        whose Jacobian determinant with respect to \((x,u,W)\) is
+                        \(-2/(xu^2)\). The chain rule cancels the two factors:
+                    </p>
+                    <div class="math-display">
+                        \[
+                        \det J_F
+                        =
+                        \left(-\frac{2}{xu^2}\right)(xu^2)
+                        =-2.
+                        \]
+                    </div>
+                    <p>
+                        Both sides are polynomial in \(x,y,z\), so equality on this dense region
+                        implies the identity everywhere, including \(x=0\) and \(u=0\).
+                    </p>
+                </div>
+            </details>
+
+            <details class="derivation">
+                <summary>Show me one of the collision calculations</summary>
+                <div class="derivation-body">
+                    <p>
+                        At \(p_+=(1,-3/2,13/2)\), both \(1+xy\) and \(4+3xy\) equal \(-1/2\).
+                        Direct substitution gives
+                    </p>
+                    <div class="math-display">
+                        \[
+                        \begin{aligned}
+                        F_1(p_+)
+                            &amp;= -\frac18\cdot\frac{13}{2}
+                               +\frac94\cdot\frac14
+                             =-\frac14,\\
+                        F_2(p_+)
+                            &amp;= -\frac32+\frac{39}{8}-\frac{27}{8}
+                             =0,\\
+                        F_3(p_+)
+                            &amp;= 2+\frac92-\frac{13}{2}
+                             =0.
+                        \end{aligned}
+                        \]
+                    </div>
+                    <p>
+                        The calculation for \(p_-\) repeats with the signs of \(x\) and \(y\)
+                        reversed. The point \(p_0\) is immediate.
+                    </p>
+                </div>
+            </details>
+
+            <h3>The geometry hiding behind the formula</h3>
+
+            <p>
+                The coefficients look conjured from nowhere, but the map has a clean retrospective
+                explanation. Begin with a cubic polynomial having three distinct linear factors,
+                \(C=L_1L_2L_3\). Mark one factor \(L_i\), place the other two in a quadratic
+                \(Q_i=C/L_i\), and then forget which factor was marked:
+            </p>
+
+            <figure class="figure root-choice">
+                <svg viewBox="0 0 640 230" role="img" aria-labelledby="root-choice-title root-choice-desc">
+                    <title id="root-choice-title">Three choices of a marked root map to one cubic</title>
+                    <desc id="root-choice-desc">Each row marks a different one of three roots, but forgetting the mark produces the same cubic polynomial.</desc>
+                    <text class="dg-label-muted" x="42" y="26">choose one linear factor</text>
+                    <text class="dg-label-muted" x="430" y="26">forget the choice</text>
+
+                    <circle class="root-mark" cx="72" cy="64" r="17"/>
+                    <circle class="root-plain" cx="142" cy="64" r="17"/>
+                    <circle class="root-plain" cx="212" cy="64" r="17"/>
+                    <text class="dg-label root-letter" x="67" y="69">1</text>
+                    <text class="dg-label root-letter" x="137" y="69">2</text>
+                    <text class="dg-label root-letter" x="207" y="69">3</text>
+                    <path class="dg-ghost" d="M250 64 L382 112"/>
+
+                    <circle class="root-plain" cx="72" cy="115" r="17"/>
+                    <circle class="root-mark" cx="142" cy="115" r="17"/>
+                    <circle class="root-plain" cx="212" cy="115" r="17"/>
+                    <text class="dg-label root-letter" x="67" y="120">1</text>
+                    <text class="dg-label root-letter" x="137" y="120">2</text>
+                    <text class="dg-label root-letter" x="207" y="120">3</text>
+                    <path class="dg-ghost" d="M250 115 L382 115"/>
+
+                    <circle class="root-plain" cx="72" cy="166" r="17"/>
+                    <circle class="root-plain" cx="142" cy="166" r="17"/>
+                    <circle class="root-mark" cx="212" cy="166" r="17"/>
+                    <text class="dg-label root-letter" x="67" y="171">1</text>
+                    <text class="dg-label root-letter" x="137" y="171">2</text>
+                    <text class="dg-label root-letter" x="207" y="171">3</text>
+                    <path class="dg-ghost" d="M250 166 L382 118"/>
+
+                    <circle class="dg-dot-accent" cx="398" cy="115" r="5"/>
+                    <text class="dg-label" x="422" y="108">the same cubic</text>
+                    <text class="dg-label-muted" x="422" y="132">C = L1 L2 L3</text>
+                    <text class="dg-label-muted" x="42" y="210">three marked versions</text>
+                </svg>
+                <figcaption>
+                    A generic cubic offers three choices for the marked linear factor. Multiplication
+                    forgets the mark, so the resulting map is naturally three-to-one.
+                </figcaption>
+            </figure>
+
+            <p>
+                The raw multiplication map \((L,Q)\mapsto LQ\) has unwanted scaling and root-collision
+                directions, so it is not yet locally invertible. The construction normalizes their
+                resultant to remove those directions, then chooses an affine slice that happens to be
+                polynomially equivalent to \(\mathbb{C}^3\). In the resulting coordinates, “forget the
+                marked root” becomes the degree-\(7\) formula above.
+            </p>
+
+            <p>
+                This viewpoint, developed in
+                <a href="https://terrytao.wordpress.com/2026/07/21/a-digestion-of-the-jacobian-conjecture-counterexample/" target="_blank" rel="noopener">Terence Tao's digestion ↗</a>,
+                explains the otherwise mysterious three-point fiber. The map is not accidentally
+                three-to-one; three choices were built into its geometry from the beginning.
+            </p>
+
+            <h2>3. Why did this take 87 years?</h2>
+
+            <p>
+                The year count is \(2026-1939=87\), not 89. The short answer is that checking a proposed
+                witness and discovering one are radically different tasks. Four difficulties reinforced
+                one another.
+            </p>
+
+            <h3>3.1 Brute force sees an overdetermined desert</h3>
+
+            <p>
+                A general degree-\(7\) map \(\mathbb{C}^3\to\mathbb{C}^3\) has \(360\) coefficient
+                slots. Its Jacobian determinant can have degree as high as \(18\), with \(1{,}329\)
+                nonconstant coefficients that must all cancel. Those equations are structured rather
+                than independent, but a blind coefficient search does not know the structure. It mostly
+                sees an enormous nonlinear system with no reason to expect a solution.
+            </p>
+
+            <h3>3.2 The useful idea looks worse after changing coordinates</h3>
+
+            <p>
+                “Mark one root, then forget the mark” is simple. Converting the spaces of marked and
+                unmarked cubics into ordinary affine coordinates is not. By the time that geometric
+                operation is written as three polynomials in \(x,y,z\), the idea is buried under
+                engineered cancellations. The final formula is easy to test and hard to reverse-engineer.
+            </p>
+
+            <h3>3.3 Local information does not control infinity</h3>
+
+            <p>
+                Many local-to-global theorems become true after adding a condition such as properness:
+                points escaping to infinity cannot have bounded images. This counterexample is
+                <em>not</em> proper. Its different sheets can disappear toward infinity rather than
+                collide at a critical point. That is how the map stays locally invertible while being
+                globally three-to-one. A recent structural analysis describes it as an étale,
+                non-proper map with mixed-sign grading
+                <a href="https://arxiv.org/abs/2607.20210" target="_blank" rel="noopener">[Shaska, 2026] ↗</a>.
+            </p>
+
+            <h3>3.4 Earlier reductions changed the shape of the search</h3>
+
+            <p>
+                Classical work showed that the all-dimensional conjecture could be reduced to cubic
+                maps. That is powerful for proving a universal theorem, but the reduction may increase
+                the number of variables substantially. The compact counterexample instead lives in only
+                three variables at degree \(7\). A search insisting on low degree and low dimension at
+                the same time could therefore miss precisely this kind of construction
+                <a href="https://doi.org/10.1090/S0273-0979-1982-15032-7" target="_blank" rel="noopener">[Bass–Connell–Wright, 1982] ↗</a>.
+            </p>
+
+            <p>
+                There was also a sociological asymmetry: a conjecture usually organizes work around
+                proving it, understanding positive cases, and simplifying it. The Jacobian conjecture
+                accumulated many claimed proofs and at least five published incorrect ones. Once the
+                right counterexample is visible, its brevity can make the previous 87 years look
+                irrational. Before the right coordinates were visible, it was anything but obvious.
+            </p>
+
+            <div class="callout">
+                <p>
+                    <strong>A useful distinction.</strong> The final verification is not evidence that
+                    the problem was easy. It is evidence that counterexamples can have very low
+                    <em>verification complexity</em> and very high <em>discovery complexity</em>.
+                </p>
+            </div>
+
+            <h2>4. My comments on the work</h2>
+
+            <h3>4.1 Call it a human–AI result, with incomplete provenance</h3>
+
+            <p>
+                The defensible public account is precise but limited: Akhil Mathew prompted the question,
+                Levent Alpöge announced and checked the result, and the announcement credits Fable with
+                producing the counterexample. The full model conversation and search trace have not been
+                made public. So “Fable disproved the conjecture” is a useful headline, but not yet a
+                complete account of how the mathematical labor was divided.
+            </p>
+
+            <h3>4.2 This is an unusually good shape for AI-assisted mathematics</h3>
+
+            <p>
+                A counterexample is a finite witness. Once a model proposes one, independent systems can
+                differentiate it, substitute exact rational points, and formalize the logic. There is no
+                long proof whose hidden gap depends on taste or interpretation. The
+                <a href="https://isa-afp.org/entries/Jacobian_Counterexample.html" target="_blank" rel="noopener">Archive of Formal Proofs entry ↗</a>
+                checks the determinant, the collision, the normalization to determinant \(1\), and the
+                extension to every \(n\geq3\).
+            </p>
+
+            <p>
+                This does not make verification optional. It makes the collaboration pattern unusually
+                clean: use a generative system to search for a witness, a computer algebra system to
+                reject mistakes quickly, a proof assistant to certify the finite claim, and human
+                mathematics to explain why the witness exists.
+            </p>
+
+            <h3>4.3 The explanation matters almost as much as the witness</h3>
+
+            <p>
+                The raw formula answers “is the conjecture false?” The marked-root construction answers
+                “how could such a map exist?” Those are different achievements. Without the second, the
+                counterexample is a miraculous string of coefficients. With it, the result becomes a new
+                reusable idea about non-proper polynomial maps and finite covers.
+            </p>
+
+            <h3>4.4 The story is not over</h3>
+
+            <p>
+                The general conjecture is dead, but the plane case is not. The next questions are sharper:
+                what additional global condition restores invertibility, how small can counterexamples
+                be, how should they be classified, and which conjectures known to be equivalent in all
+                dimensions must now be reformulated? The discovery closes one problem and opens a more
+                structural program.
+            </p>
+
+            <blockquote>
+                A nonzero Jacobian determinant guarantees a local way back. The counterexample shows
+                that it does not guarantee that all those local ways back belong to one global road.
+            </blockquote>
+
+            <p>
+                My main takeaway is not that an AI performed a long proof faster. It is that Fable appears
+                to have found the right object to test—a compact, exact witness hiding behind an
+                unexpected change of coordinates. That is a different and, for mathematical discovery,
+                potentially more consequential capability.
+            </p>
+
+            <hr>
+
+            <div class="post-refs">
+                <h2>Sources and verification</h2>
+                <ol class="source-list">
+                    <li>
+                        O.-H. Keller,
+                        <a href="https://doi.org/10.1007/BF01695502" target="_blank" rel="noopener"><em>Ganze Cremona-Transformationen</em> (1939) ↗</a>.
+                    </li>
+                    <li>
+                        Levent Alpöge,
+                        <a href="https://x.com/__alpoge__/status/2079028340955197566" target="_blank" rel="noopener">original counterexample announcement, 20 July 2026 ↗</a>.
+                    </li>
+                    <li>
+                        Anthropic,
+                        <a href="https://www.anthropic.com/claude/fable" target="_blank" rel="noopener"><em>Claude Fable 5</em> model page ↗</a>.
+                    </li>
+                    <li>
+                        Terence Tao,
+                        <a href="https://terrytao.wordpress.com/2026/07/21/a-digestion-of-the-jacobian-conjecture-counterexample/" target="_blank" rel="noopener"><em>A digestion of the Jacobian conjecture counterexample</em> ↗</a>.
+                    </li>
+                    <li>
+                        Arthur Freitas Ramos, David Barros Hulak, and Ruy José Guerra Barretto de Queiroz,
+                        <a href="https://isa-afp.org/entries/Jacobian_Counterexample.html" target="_blank" rel="noopener"><em>Formal Verification of an Explicit Counterexample to the Jacobian Conjecture</em> ↗</a>.
+                    </li>
+                    <li>
+                        T. Shaska,
+                        <a href="https://arxiv.org/abs/2607.20210" target="_blank" rel="noopener"><em>Graded Keller maps and the Jacobian Conjecture</em> ↗</a>.
+                    </li>
+                    <li>
+                        Hyman Bass, Edwin H. Connell, and David Wright,
+                        <a href="https://doi.org/10.1090/S0273-0979-1982-15032-7" target="_blank" rel="noopener"><em>The Jacobian Conjecture: Reduction of Degree and Formal Expansion of the Inverse</em> (1982) ↗</a>.
+                    </li>
+                    <li>
+                        Eric W. Weisstein,
+                        <a href="https://mathworld.wolfram.com/JacobianConjecture.html" target="_blank" rel="noopener"><em>Jacobian Conjecture</em>, MathWorld ↗</a>.
+                    </li>
+                </ol>
+                <p class="verification-note">
+                    I also independently checked the displayed determinant and all three substitutions
+                    using exact symbolic arithmetic. Sources and status last checked 25 July 2026.
+                </p>
+            </div>
+
+            <a href="index.html#blogs" class="back-link post-back-link">← Back to blogs</a>
+        </article>
+    </div>
+
+    <script>
+        (function () {
+            var root = document.documentElement;
+            var button = document.querySelector('.theme-toggle');
+            if (!button) return;
+
+            button.addEventListener('click', function () {
+                var isDark = root.getAttribute('data-theme') === 'dark';
+                if (isDark) {
+                    root.removeAttribute('data-theme');
+                    localStorage.setItem('theme', 'light');
+                } else {
+                    root.setAttribute('data-theme', 'dark');
+                    localStorage.setItem('theme', 'dark');
+                }
+            });
+        })();
+    </script>
+</body>
+</html>
