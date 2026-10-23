@@ -39,8 +39,9 @@ function showSection(sectionId) {
 // Handle nav link clicks
 navLinks.forEach(link => {
     link.addEventListener('click', (e) => {
-        e.preventDefault();
         const sectionId = link.getAttribute('data-section');
+        if (!sectionId) return; // plain links (e.g. Resume PDF) behave normally
+        e.preventDefault();
         showSection(sectionId);
     });
 });
@@ -48,8 +49,9 @@ navLinks.forEach(link => {
 // Handle internal links (like CV link in the about section)
 internalLinks.forEach(link => {
     link.addEventListener('click', (e) => {
-        e.preventDefault();
         const sectionId = link.getAttribute('data-section');
+        if (!sectionId) return; // plain links (e.g. Resume PDF) behave normally
+        e.preventDefault();
         showSection(sectionId);
     });
 });
